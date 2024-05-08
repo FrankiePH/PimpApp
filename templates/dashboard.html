@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #ffffff;
+        }
+
+        .content-section {
+            display: flex;
+            height: 80vh;
+        }
+
+        .left-section, .right-section {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin: 5px;
+            background-color: #ffffff;
+            overflow: auto;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .button {
+            width: 150px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        #search-results {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            width: 50%;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 100;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .table th, .table td {
+            padding: 0.75rem;
+            vertical-align: top;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .table thead th {
+            vertical-align: bottom;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .close-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            font-size: 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .close-btn:hover {
+            background-color: #5a6268;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div class="user-info">
+            <h2>Welcome, {{ user.username }}</h2>
+        </div>
+        <div class="user-balance">
+            <h2>Balance: ${{ user.balance }}</h2>
+        </div>
+    </div>
+    <div class="content-section">
+        <div class="left-section">
+            <div class="buttons-container">
+                <input type="text" id="track-search" placeholder="Search for a track">
+                <button class="btn btn-primary button" onclick="searchTracks()">Search</button>
+                <div id="search-results">
+                    <!-- Search results will appear here -->
+                </div>
+                
+                <button class="btn btn-primary button">Button 2</button>
+                <button class="btn btn-primary button">Button 3</button>
+                <button class="btn btn-primary button">Button 4</button>
+                <button class="btn btn-primary button">Button 5</button>
+            </div>
+        </div>
+        <div class="right-section">
+            <p>Right Section Content</p>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger logout-btn">Logout</a>
+    <button onclick="closeSearchResults()" class="btn close-btn">Close</button>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    function searchTracks() {
+        const apiKey = '9d0cc246db6b44a8140ff0ee51c1a4f3';
+        const query = document.getElementById('track-search').value;
+        fetch(`http://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(query)}&api_key=${apiKey}&format=json`)
+            .then(response => response.json())
+            .then(data => {
+                const tracks = data.results.trackmatches.track;
+                const resultsContainer = document.getElementById('search-results');
+                resultsContainer.innerHTML = '<table class="table"><thead><tr><th>Track Name</th><th>Artist</th></tr></thead><tbody></tbody></table>';
+                const tbody = resultsContainer.querySelector('tbody');
+                tracks.forEach(track => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${track.name}</td><td>${track.artist}</td>`;
+                    row.addEventListener('click', function() {
+                        submitSong(track.name, track.artist);
+                    });
+                    tbody.appendChild(row);
+                });
+                resultsContainer.style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function submitSong(songTitle, artist) {
+        fetch('/submit_song', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ song_title: songTitle, artist: artist })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Song submitted successfully');
+                closeSearchResults();
+            }
+        }).catch(error => {
+            console.error('Failed to submit song:', error);
+        });
+    }
+
+    function closeSearchResults() {
+        document.getElementById('search-results').style.display = 'none';
+    }
+</script>
+</body>
+</html>
